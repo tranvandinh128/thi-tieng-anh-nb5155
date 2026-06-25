@@ -1,0 +1,91 @@
+<!DOCTYPE html>  
+<html lang="vi">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Thi Tiếng Anh NB5155</title>  
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>  
+    <style>  
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f5f5f5; }  
+        .container { text-align: center; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }  
+        button { background: #6b21a8; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }  
+        button:hover { background: #581c87; }  
+        .hidden { display: none; }  
+        #status { color: #666; margin-top: 10px; }  
+    </style>  
+</head>  
+<body>  
+  
+<div class="container">  
+    <h2>Thi Tiếng Anh NB5155</h2>  
+    <div id="auth-section">  
+        <p id="status">Đang tự động đăng nhập qua Pi Network...</p>  
+        <button id="signin-btn" class="hidden" onclick="handleAuthentication()">Đăng nhập bằng Pi</button>  
+    </div>  
+    <div id="app-section" class="hidden">  
+        <h3 id="welcome-msg">Chào mừng, Pioneer!</h3>  
+        <p>Bạn đã đăng nhập thành công vào hệ thống thi tiếng Anh.</p>  
+    </div>  
+</div>  
+  
+<script>  
+    let isSdkInitialized = false;  
+  
+    async function initPiSDK() {  
+        try {  
+            await window.Pi.init({ version: "2.0", sandbox: false });  
+            isSdkInitialized = true;  
+            console.log("Pi SDK initialized successfully.");  
+            await handleAuthentication();  
+        } catch (error) {  
+            console.error("Pi SDK initialization failed:", error);  
+            document.getElementById("status").innerText = "Không thể khởi tạo Pi SDK. Hãy mở trong Pi Browser.";  
+            document.getElementById("signin-btn").classList.remove("hidden");  
+        }  
+    }  
+  
+    async function handleAuthentication() {  
+        if (!isSdkInitialized) {  
+            document.getElementById("status").innerText = "Chưa kết nối được Pi SDK, vui lòng thử lại.";  
+            return;  
+        }  
+  
+        document.getElementById("status").innerText = "Đang xác thực tài khoản...";  
+        document.getElementById("signin-btn").classList.add("hidden");  
+  
+        try {  
+            const scopes = ['username'];  
+            const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound);  
+              
+            // Gửi access token lên Backend để xác thực  
+            const response = await fetch('/api/auth/pi', {  
+                method: 'POST',  
+                headers: { 'Content-Type': 'application/json' },  
+                body: JSON.stringify({ accessToken: authResult.accessToken })  
+            });  
+  
+            const data = await response.json();  
+  
+            if (response.ok && data.success) {  
+                document.getElementById("auth-section").classList.add("hidden");  
+                document.getElementById("app-section").classList.remove("hidden");  
+                document.getElementById("welcome-msg").innerText = `Chào mừng, ${data.user.username}!`;  
+            } else {  
+                throw new Error(data.message || "Backend authentication failed");  
+            }  
+        } catch (error) {  
+            console.error("Authentication process failed:", error);  
+            document.getElementById("status").innerText = "Đăng nhập thất bại. Vui lòng bấm nút để thử lại.";  
+            document.getElementById("signin-btn").classList.remove("hidden");  
+        }  
+    }  
+  
+    function onIncompletePaymentFound(payment) {  
+        console.log("Incomplete payment found:", payment);  
+    }  
+  
+    // Tự động kích hoạt khi ứng dụng tải xong  
+    window.addEventListener('DOMContentLoaded', initPiSDK);  
+</script>  
+</body>  
+</html>  
